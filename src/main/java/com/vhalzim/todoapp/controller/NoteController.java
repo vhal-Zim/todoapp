@@ -3,6 +3,8 @@ package com.vhalzim.todoapp.controller;
 import com.vhalzim.todoapp.model.NoteEntity;
 import com.vhalzim.todoapp.repository.NoteRepository;
 import com.vhalzim.todoapp.service.NoteService;
+import lombok.extern.log4j.Log4j;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +13,8 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/notes") // ✅ Agregar path basez
+@RequestMapping("/api/notes")
+@Slf4j
 public class NoteController {
 
     @Autowired
@@ -22,7 +25,9 @@ public class NoteController {
 
     @PostMapping
     public NoteEntity createNote(@RequestBody NoteEntity note) {
+        log.info(String.format("Note Created: %s", note.getBody()));
         return noteService.createNote(note);
+
     }
 
     @GetMapping
@@ -34,20 +39,7 @@ public class NoteController {
     public ResponseEntity<NoteEntity> getNoteById(@PathVariable long id) {
         Optional<NoteEntity> note = noteService.getNoteById(id);
 
-        if (note.isPresent()) {
-            return ResponseEntity.ok(note.get());
-        } else {
-            return ResponseEntity.notFound().build();
-        }
-
-        //return note
-        //        .map(ResponseEntity::ok)
-        //        .orElse(ResponseEntity.notFound().build());
-
-        //return ResponseEntity.ok(
-        //        noteRepository.findById(id)
-        //                .orElseThrow(() -> new EntityNotFoundException("Note not found"))
-        //);
+        return note.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")

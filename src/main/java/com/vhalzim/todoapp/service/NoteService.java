@@ -2,6 +2,7 @@ package com.vhalzim.todoapp.service;
 
 import com.vhalzim.todoapp.model.NoteEntity;
 import com.vhalzim.todoapp.repository.NoteRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -15,20 +16,40 @@ public class NoteService {
 
 
     public NoteEntity createNote(NoteEntity note) {
-        return noteRepository.save(note);
+        try {
+            Thread.sleep(2000);
+            return noteRepository.save(note);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<NoteEntity> getAllNotes() {
-        return noteRepository.findAll();
+        try {
+            Thread.sleep(2000);
+            return noteRepository.findAll();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     public Optional<NoteEntity> getNoteById(long id) {
-        return noteRepository.findById(id);
+        try {
+            Thread.sleep(2000);
+            return noteRepository.findById(id);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public boolean noteExistsById(Long id) {
-        return noteRepository.existsById(id);
-
+        try {
+            Thread.sleep(2000);
+            return noteRepository.existsById(id);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
