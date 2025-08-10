@@ -3,66 +3,65 @@ package com.vhalzim.todoapp.controller;
 import com.vhalzim.todoapp.model.NoteEntity;
 import com.vhalzim.todoapp.repository.NoteRepository;
 import com.vhalzim.todoapp.service.NoteService;
-import lombok.extern.log4j.Log4j;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/notes")
-@Slf4j
 public class NoteController {
 
-    @Autowired
-    private NoteRepository noteRepository;
+    private final NoteService noteService;
 
-    @Autowired
-    private NoteService noteService;
+    public NoteController(NoteService noteService) {
+        this.noteService = noteService;
+    }
 
     @PostMapping
-    public NoteEntity createNote(@RequestBody NoteEntity note) {
-        log.info(String.format("Note Created: %s", note.getBody()));
+    @ResponseStatus(HttpStatus.CREATED)
+    public Mono<NoteEntity> createNote(@RequestBody NoteEntity note) {
         return noteService.createNote(note);
-
     }
 
     @GetMapping
-    public List<NoteEntity> getAllNotes() {
+    public Flux<NoteEntity> getAllNotes() {
         return noteService.getAllNotes();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<NoteEntity> getNoteById(@PathVariable long id) {
-        Optional<NoteEntity> note = noteService.getNoteById(id);
-
-        return note.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    public Mono<ResponseEntity<NoteEntity>> getNoteById(@PathVariable long id) {
+        return noteService.getNoteById(id)
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NoteEntity> updateNote(@PathVariable Long id, @RequestBody NoteEntity noteDetails) {
-        Optional<NoteEntity> optionalNote = noteService.getNoteById(id);
-        if (optionalNote.isPresent()) {
-            NoteEntity note = optionalNote.get();
-            note.setBody(noteDetails.getBody());
-            note.setCompleted(noteDetails.isCompleted());
-            return ResponseEntity.ok(noteService.createNote(note));
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    public Mono<ResponseEntity<NoteEntity>> updateNote(@PathVariable Long id, @RequestBody NoteEntity noteDetails) {
+        return noteService.getNoteById(id)
+                .flatMap(existingNote -> {
+                    existingNote.setBody(noteDetails.getBody());
+                    existingNote.setCompleted(noteDetails.isCompleted());
+                    return noteService.createNote(existingNote);
+                })
+                .map(ResponseEntity::ok)
+                .defaultIfEmpty(ResponseEntity.notFound().build());
     }
-
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteNote(@PathVariable Long id) {
-        if (noteService.noteExistsById(id)) {
-            noteRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public Mono<Void> deleteNote(@PathVariable Long id) {
+        return noteService.getNoteById(id)
+                .flatMap(note -> noteService.deleteNoteById(id))
+                .switchIfEmpty(Mono.error(new ResponseStatusException(HttpStatus.NOT_FOUND)));
     }
 }
+
+
